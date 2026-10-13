@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#101d35" />
+    <meta name="description" content="Panel de control y programación para un sistema de riego." />
+    <title>Control de electroválvulas</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="sena-placeholder" aria-label="Espacio reservado para el logo del SENA">
+          <span class="sena-symbol">S</span>
+          <span>ESPACIO PARA<br />LOGO SENA</span>
+        </div>
+        <div class="brand-copy">
+          <p class="eyebrow">SISTEMA DE RIEGO</p>
+          <h1>Control de electroválvulas</h1>
+        </div>
+        <div class="connection-badge"><span class="connection-dot"></span> Vista previa local</div>
+      </header>
+
+      <main>
+        <section class="clock-panel" aria-label="Reloj del sistema">
+          <div class="clock-time" id="clockTime" aria-live="off">00:00:00</div>
+          <div class="clock-date" id="clockDate">--</div>
+          <button class="button button-sync" id="syncClock" type="button">
+            <span aria-hidden="true">↻</span> Sincronizar hora con este dispositivo
+          </button>
+          <p class="clock-caption" id="syncCaption">Hora local del navegador</p>
+        </section>
+
+        <section class="master-panel" aria-label="Controles generales">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">CONTROL GENERAL</p>
+              <h2>Válvulas y motobomba</h2>
+            </div>
+            <div class="master-status">
+              <span class="active-count"><strong id="activeCount">00</strong> equipos activos</span>
+            </div>
+          </div>
+          <div class="master-actions">
+            <button class="button button-on" id="turnAllOn" type="button">Encender todo</button>
+            <button class="button button-off" id="turnAllOff" type="button">Apagar todo</button>
+          </div>
+          <p class="master-caption" id="masterCaption">Todos los equipos apagados</p>
+          <div class="schedule-master">
+            <div class="schedule-master-copy">
+              <span class="schedule-master-title">Horario automático</span>
+              <span class="schedule-master-status" id="scheduleStatus">Horarios desactivados</span>
+            </div>
+            <button class="button button-schedule" id="toggleSchedule" type="button">Activar horarios</button>
+          </div>
+        </section>
+
+        <section class="equipment-section" aria-labelledby="equipmentTitle">
+          <div class="equipment-heading">
+            <div>
+              <p class="eyebrow">11 CANALES</p>
+              <h2 id="equipmentTitle">Equipos de riego</h2>
+            </div>
+            <span class="equipment-hint">Programa cada equipo por separado</span>
+          </div>
+          <div class="equipment-grid" id="equipmentGrid"></div>
+          <div class="save-bar">
+            <p>Los cambios se conservan en este navegador.</p>
+            <div class="save-actions">
+              <button class="button button-save-secondary" id="saveChanges" type="button">Guardar cambios</button>
+              <button class="button button-save" id="saveEquipment" type="button">Guardar configuración de equipos</button>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="page-footer">
+        <span>CONTROL DE RIEGO <span class="footer-divider">/</span> SENA</span>
+        <span id="savedLabel">Configuración sin guardar</span>
+      </footer>
+      <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+    </div>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
