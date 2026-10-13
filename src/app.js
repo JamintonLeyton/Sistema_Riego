@@ -3,16 +3,14 @@ const CONFIG_KEY = 'control-electrovalvulas-config-v1';
 
 function createDefaultEquipment() {
   return [
-    { id: 'pump', name: 'Motobomba', channel: 11, kind: 'pump', manualOn: false, scheduleEnabled: false, start: '06:00', end: '06:30' },
+    { id: 'pump', name: 'Motobomba', channel: 11, kind: 'pump', manualOn: false, schedules: [] },
     ...Array.from({ length: 10 }, (_, index) => ({
       id: `valve-${index + 1}`,
       name: `Válvula ${index + 1}`,
       channel: index + 1,
       kind: 'valve',
       manualOn: false,
-      scheduleEnabled: false,
-      start: '06:00',
-      end: '06:30',
+      schedules: Array.from({ length: 3 }, () => ({ enabled: false, start: '06:00', end: '06:30' })),
     })),
   ];
 }
@@ -29,6 +27,19 @@ function isValidTime(value) {
   return typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 }
 
+function restoreSchedules(saved = {}) {
+  const savedSchedules = Array.isArray(saved.schedules) ? saved.schedules : [];
+  return Array.from({ length: 3 }, (_, index) => {
+    const savedSchedule = savedSchedules[index] || {};
+    const migrateLegacySchedule = index === 0 && !Array.isArray(saved.schedules);
+    return {
+      enabled: Boolean(savedSchedule.enabled ?? (migrateLegacySchedule && saved.scheduleEnabled)),
+      start: isValidTime(savedSchedule.start) ? savedSchedule.start : (migrateLegacySchedule && isValidTime(saved.start) ? saved.start : '06:00'),
+      end: isValidTime(savedSchedule.end) ? savedSchedule.end : (migrateLegacySchedule && isValidTime(saved.end) ? saved.end : '06:30'),
+    };
+  });
+}
+
 const savedConfig = readJson(CONFIG_KEY);
 const savedEquipment = readJson(EQUIPMENT_KEY) || savedConfig?.equipment;
 const savedById = new Map(Array.isArray(savedEquipment) ? savedEquipment.map((item) => [item.id, item]) : []);
@@ -38,9 +49,7 @@ const state = {
     return {
       ...item,
       manualOn: Boolean(saved.manualOn),
-      scheduleEnabled: Boolean(saved.scheduleEnabled),
-      start: isValidTime(saved.start) ? saved.start : item.start,
-      end: isValidTime(saved.end) ? saved.end : item.end,
+      schedules: item.kind === 'valve' ? restoreSchedules(saved) : [],
     };
   }),
   powerOn: Boolean(savedConfig?.scheduleActive),
@@ -53,23 +62,35 @@ const scheduleButton = document.querySelector('#toggleSchedule');
 const toastElement = document.querySelector('#toast');
 let toastTimer;
 
-function timeIsWithinSchedule(start, end, date) {
+function timeIsWithinSchedule(start, end, date, beforeMinutes = 0, afterMinutes = 0) {
   const current = date.getHours() * 60 + date.getMinutes();
   const [startHour, startMinute] = start.split(':').map(Number);
   const [endHour, endMinute] = end.split(':').map(Number);
   const startMinutes = startHour * 60 + startMinute;
   const endMinutes = endHour * 60 + endMinute;
+  const duration = (endMinutes - startMinutes + 1440) % 1440;
 
-  if (startMinutes === endMinutes) return false;
-  if (startMinutes < endMinutes) return current >= startMinutes && current < endMinutes;
-  return current >= startMinutes || current < endMinutes;
+  if (duration === 0) return false;
+  const extendedDuration = duration + beforeMinutes + afterMinutes;
+  if (extendedDuration >= 1440) return true;
+
+  const extendedStart = (startMinutes - beforeMinutes + 1440) % 1440;
+  const elapsed = (current - extendedStart + 1440) % 1440;
+  return elapsed < extendedDuration;
 }
 
 function isEquipmentOn(item, now = new Date()) {
-  if (state.scheduleActive) {
-    return state.powerOn && item.scheduleEnabled && timeIsWithinSchedule(item.start, item.end, now);
+  if (!state.scheduleActive) return item.manualOn;
+  if (!state.powerOn) return false;
+
+  if (item.kind === 'pump') {
+    return state.equipment.some((valve) => valve.kind === 'valve'
+      && valve.schedules.some((schedule) => schedule.enabled
+        && timeIsWithinSchedule(schedule.start, schedule.end, now, 1, 1)));
   }
-  return item.manualOn;
+
+  return item.schedules.some((schedule) => schedule.enabled
+    && timeIsWithinSchedule(schedule.start, schedule.end, now));
 }
 
 function renderEquipment() {
@@ -77,6 +98,30 @@ function renderEquipment() {
     const isPump = item.kind === 'pump';
     const outputOn = isEquipmentOn(item);
     const statusText = isPump ? (outputOn ? 'Encendida' : 'Apagada') : (outputOn ? 'Abierta' : 'Cerrada');
+    const scheduleContent = isPump
+      ? '<p class="pump-schedule-note">La motobomba arranca un minuto antes y se apaga un minuto después de las válvulas programadas.</p>'
+      : item.schedules.map((schedule, index) => `
+        <div class="schedule-period">
+          <div class="schedule-card-heading">
+            <span>Horario ${index + 1}</span>
+            <label class="schedule-toggle" aria-label="Activar horario ${index + 1} para ${item.name}">
+              <input type="checkbox" data-action="toggle-schedule" data-period-index="${index}" data-id="${item.id}" ${schedule.enabled ? 'checked' : ''} />
+              <span class="toggle-track" aria-hidden="true"><span></span></span>
+            </label>
+          </div>
+          <div class="schedule-times">
+            <label class="time-field">
+              <span>Desde</span>
+              <input type="time" lang="en-GB" value="${schedule.start}" aria-label="Inicio del horario ${index + 1} de ${item.name}" data-action="set-schedule-time" data-part="start" data-period-index="${index}" data-id="${item.id}" />
+            </label>
+            <span class="time-separator" aria-hidden="true">a</span>
+            <label class="time-field">
+              <span>Hasta</span>
+              <input type="time" lang="en-GB" value="${schedule.end}" aria-label="Fin del horario ${index + 1} de ${item.name}" data-action="set-schedule-time" data-part="end" data-period-index="${index}" data-id="${item.id}" />
+            </label>
+          </div>
+        </div>
+      `).join('');
 
     return `
       <article class="device-card ${isPump ? 'pump-card' : ''} ${outputOn ? 'is-active' : ''}" data-device-card="${item.id}">
@@ -93,24 +138,7 @@ function renderEquipment() {
           </div>
         </div>
         <div class="schedule-divider"></div>
-        <div class="schedule-card-heading">
-          <span>Horario independiente</span>
-          <label class="schedule-toggle" aria-label="Activar horario para ${item.name}">
-            <input type="checkbox" data-action="toggle-device-schedule" data-id="${item.id}" ${item.scheduleEnabled ? 'checked' : ''} />
-            <span class="toggle-track" aria-hidden="true"><span></span></span>
-          </label>
-        </div>
-        <div class="schedule-times">
-          <label class="time-field">
-            <span>Desde</span>
-            <input type="time" lang="en-GB" value="${item.start}" aria-label="Hora de inicio de ${item.name}" data-action="set-time" data-part="start" data-id="${item.id}" />
-          </label>
-          <span class="time-separator" aria-hidden="true">a</span>
-          <label class="time-field">
-            <span>Hasta</span>
-            <input type="time" lang="en-GB" value="${item.end}" aria-label="Hora de fin de ${item.name}" data-action="set-time" data-part="end" data-id="${item.id}" />
-          </label>
-        </div>
+        ${scheduleContent}
       </article>
     `;
   }).join('');
@@ -226,15 +254,20 @@ equipmentGrid.addEventListener('change', (event) => {
   const item = state.equipment.find((device) => device.id === control.dataset.id);
   if (!item) return;
 
-  if (control.dataset.action === 'toggle-device-schedule') {
-    item.scheduleEnabled = control.checked;
-    refreshOutputs();
-    saveAllChanges();
-  } else if (control.dataset.action === 'set-time' && isValidTime(control.value)) {
-    item[control.dataset.part] = control.value;
-    item.scheduleEnabled = true;
-    const scheduleToggle = equipmentGrid.querySelector(`[data-device-card="${item.id}"] [data-action="toggle-device-schedule"]`);
-    if (scheduleToggle) scheduleToggle.checked = true;
+  if (control.dataset.action === 'toggle-schedule' || control.dataset.action === 'set-schedule-time') {
+    const periodIndex = Number(control.dataset.periodIndex);
+    const schedule = item.schedules[periodIndex];
+    if (!schedule) return;
+
+    if (control.dataset.action === 'toggle-schedule') {
+      schedule.enabled = control.checked;
+    } else if (isValidTime(control.value)) {
+      schedule[control.dataset.part] = control.value;
+      schedule.enabled = true;
+      const scheduleToggle = equipmentGrid.querySelector(`[data-device-card="${item.id}"] [data-action="toggle-schedule"][data-period-index="${periodIndex}"]`);
+      if (scheduleToggle) scheduleToggle.checked = true;
+    }
+
     refreshOutputs();
     saveAllChanges();
   }

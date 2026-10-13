@@ -559,3 +559,9 @@ h2, .equipment-heading h2 { font-size: 24px; }
   .equipment-heading { align-items: flex-start; flex-direction: column; gap: 4px; }
   .equipment-hint { max-width: none; text-align: left; }
 }
+
+.schedule-period { padding: 2px 0 9px; }
+.schedule-period + .schedule-period { padding-top: 10px; border-top: 1px solid #e4ece7; }
+.schedule-period:last-child { padding-bottom: 0; }
+.schedule-period .schedule-times { margin-top: 5px; }
+.pump-schedule-note { margin: 0; padding: 2px 0; color: #536b61; font-size: 14px; line-height: 1.5; }
