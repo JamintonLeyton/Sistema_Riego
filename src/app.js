@@ -60,7 +60,7 @@ function timeIsWithinSchedule(start, end, date) {
   const startMinutes = startHour * 60 + startMinute;
   const endMinutes = endHour * 60 + endMinute;
 
-  if (startMinutes === endMinutes) return true;
+  if (startMinutes === endMinutes) return false;
   if (startMinutes < endMinutes) return current >= startMinutes && current < endMinutes;
   return current >= startMinutes || current < endMinutes;
 }
@@ -142,12 +142,14 @@ function refreshOutputs() {
   });
 
   document.querySelector('#activeCount').textContent = String(activeCount).padStart(2, '0');
-  const systemOn = state.powerOn || activeCount > 0;
+  const systemOn = activeCount > 0;
   const systemState = document.querySelector('#systemState');
   if (systemState) {
     systemState.innerHTML = `<span class="state-dot ${systemOn ? 'is-on' : ''}"></span> ${systemOn ? 'Sistema encendido' : 'Sistema apagado'}`;
   }
-  document.querySelector('#masterCaption').textContent = systemOn ? 'Sistema energizado' : 'Todos los equipos apagados';
+  document.querySelector('#masterCaption').textContent = state.scheduleActive
+    ? 'Horarios activos; equipos según programación'
+    : systemOn ? 'Sistema energizado' : 'Todos los equipos apagados';
 }
 
 function updateClock(date = new Date()) {
@@ -168,9 +170,12 @@ function showToast(message) {
 }
 
 function setAllOutputs(isOn) {
+  state.scheduleActive = false;
   state.powerOn = isOn;
   state.equipment = state.equipment.map((item) => ({ ...item, manualOn: isOn }));
-  refreshOutputs();
+  refreshScheduleControls();
+  renderEquipment();
+  saveAllChanges();
   showToast(isOn ? 'Sistema encendido.' : 'Sistema apagado.');
 }
 
@@ -223,15 +228,13 @@ equipmentGrid.addEventListener('change', (event) => {
 
   if (control.dataset.action === 'toggle-device-schedule') {
     item.scheduleEnabled = control.checked;
-    renderEquipment();
+    refreshOutputs();
+    saveAllChanges();
   } else if (control.dataset.action === 'set-time' && isValidTime(control.value)) {
     item[control.dataset.part] = control.value;
     item.scheduleEnabled = true;
-    state.scheduleActive = true;
-    state.powerOn = true;
     const scheduleToggle = equipmentGrid.querySelector(`[data-device-card="${item.id}"] [data-action="toggle-device-schedule"]`);
     if (scheduleToggle) scheduleToggle.checked = true;
-    refreshScheduleControls();
     refreshOutputs();
     saveAllChanges();
   }
@@ -252,8 +255,12 @@ document.querySelector('#syncClock').addEventListener('click', () => {
 scheduleButton.addEventListener('click', () => {
   state.scheduleActive = !state.scheduleActive;
   state.powerOn = state.scheduleActive;
+  if (state.scheduleActive) {
+    state.equipment = state.equipment.map((item) => ({ ...item, manualOn: false }));
+  }
   refreshScheduleControls();
   renderEquipment();
+  saveAllChanges();
 });
 
 refreshScheduleControls();
