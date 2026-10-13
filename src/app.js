@@ -43,7 +43,7 @@ const state = {
       end: isValidTime(saved.end) ? saved.end : item.end,
     };
   }),
-  powerOn: false,
+  powerOn: Boolean(savedConfig?.scheduleActive),
   scheduleActive: Boolean(savedConfig?.scheduleActive),
   savedAt: null,
 };
@@ -103,12 +103,12 @@ function renderEquipment() {
         <div class="schedule-times">
           <label class="time-field">
             <span>Desde</span>
-            <input type="time" value="${item.start}" aria-label="Hora de inicio de ${item.name}" data-action="set-time" data-part="start" data-id="${item.id}" />
+            <input type="time" lang="en-GB" value="${item.start}" aria-label="Hora de inicio de ${item.name}" data-action="set-time" data-part="start" data-id="${item.id}" />
           </label>
           <span class="time-separator" aria-hidden="true">a</span>
           <label class="time-field">
             <span>Hasta</span>
-            <input type="time" value="${item.end}" aria-label="Hora de fin de ${item.name}" data-action="set-time" data-part="end" data-id="${item.id}" />
+            <input type="time" lang="en-GB" value="${item.end}" aria-label="Hora de fin de ${item.name}" data-action="set-time" data-part="end" data-id="${item.id}" />
           </label>
         </div>
       </article>
@@ -226,7 +226,14 @@ equipmentGrid.addEventListener('change', (event) => {
     renderEquipment();
   } else if (control.dataset.action === 'set-time' && isValidTime(control.value)) {
     item[control.dataset.part] = control.value;
+    item.scheduleEnabled = true;
+    state.scheduleActive = true;
+    state.powerOn = true;
+    const scheduleToggle = equipmentGrid.querySelector(`[data-device-card="${item.id}"] [data-action="toggle-device-schedule"]`);
+    if (scheduleToggle) scheduleToggle.checked = true;
+    refreshScheduleControls();
     refreshOutputs();
+    saveAllChanges();
   }
 });
 
@@ -244,6 +251,7 @@ document.querySelector('#syncClock').addEventListener('click', () => {
 });
 scheduleButton.addEventListener('click', () => {
   state.scheduleActive = !state.scheduleActive;
+  state.powerOn = state.scheduleActive;
   refreshScheduleControls();
   renderEquipment();
 });
