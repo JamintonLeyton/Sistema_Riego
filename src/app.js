@@ -99,7 +99,24 @@ function renderEquipment() {
     const outputOn = isEquipmentOn(item);
     const statusText = isPump ? (outputOn ? 'Encendida' : 'Apagada') : (outputOn ? 'Abierta' : 'Cerrada');
     const scheduleContent = isPump
-      ? '<p class="pump-schedule-note">La motobomba arranca un minuto antes y se apaga un minuto después de las válvulas programadas.</p>'
+      ? `
+        <div class="pump-schedule-info">
+          <div>
+            <h4 class="pump-schedule-title">Acompañamiento automático</h4>
+            <p class="pump-schedule-note">La motobomba sigue las franjas habilitadas de las válvulas y no necesita horarios propios.</p>
+          </div>
+          <div class="pump-schedule-offsets" aria-label="Margen de funcionamiento de la motobomba">
+            <div class="pump-schedule-offset">
+              <span>Arranque</span>
+              <strong>1 min antes</strong>
+            </div>
+            <div class="pump-schedule-offset">
+              <span>Apagado</span>
+              <strong>1 min después</strong>
+            </div>
+          </div>
+        </div>
+      `
       : item.schedules.map((schedule, index) => `
         <div class="schedule-period">
           <div class="schedule-card-heading">

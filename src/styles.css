@@ -345,7 +345,7 @@ main { display: grid; grid-template-columns: minmax(290px, .78fr) minmax(0, 1.22
 .master-panel { grid-column: 2; grid-row: 1; border-top: 3px solid #48b875; }
 .master-panel h2, .equipment-heading h2 { color: #24473d; }
 .equipment-section { grid-column: 1 / -1; grid-row: 2; padding-top: 8px; }
-.equipment-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; }
+.equipment-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; align-items: start; }
 .device-card { border-top: 3px solid #53b879; padding: 15px; }
 .device-card.is-active { border-color: #78bf8d; border-top-color: #268b54; background: #f0f8f1; }
 .pump-card { border-color: #b8d8e5; border-top-color: #328db0; background: #f0f7fa; }
@@ -564,4 +564,19 @@ h2, .equipment-heading h2 { font-size: 24px; }
 .schedule-period + .schedule-period { padding-top: 10px; border-top: 1px solid #e4ece7; }
 .schedule-period:last-child { padding-bottom: 0; }
 .schedule-period .schedule-times { margin-top: 5px; }
-.pump-schedule-note { margin: 0; padding: 2px 0; color: #536b61; font-size: 14px; line-height: 1.5; }
+.pump-card { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(180px, .7fr) minmax(0, 1.3fr); column-gap: 24px; align-items: center; }
+.pump-card .device-card-heading { grid-column: 1; grid-row: 1; }
+.pump-card .schedule-divider { grid-column: 1; grid-row: 2; width: 100%; margin: 8px 0; }
+.pump-schedule-info { grid-column: 2; grid-row: 1 / span 2; display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, .9fr); align-items: center; gap: 22px; }
+.pump-schedule-title { margin: 0 0 4px; color: #24473d; font-size: 17px; line-height: 1.3; }
+.pump-schedule-note { margin: 0; color: #536b61; font-size: 16px; line-height: 1.5; }
+.pump-schedule-offsets { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.pump-schedule-offset { display: grid; gap: 2px; padding-left: 12px; border-left: 3px solid #328db0; color: #536b61; font-size: 13px; }
+.pump-schedule-offset strong { color: #245d76; font-size: 17px; }
+
+@media (max-width: 760px) {
+  .pump-card { grid-template-columns: minmax(0, 1fr); row-gap: 8px; }
+  .pump-card .device-card-heading, .pump-card .schedule-divider, .pump-schedule-info { grid-column: 1; grid-row: auto; }
+  .pump-schedule-info { grid-template-columns: 1fr; gap: 14px; }
+  .pump-schedule-offsets { gap: 12px; }
+}
